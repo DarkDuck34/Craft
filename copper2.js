@@ -212,7 +212,7 @@ function looper() {
                                 addToPossibleListItems(getLeftForwardAndRight()[1], "copper");
                                 stopLoop();
                                 hitCount = 0;
-                                var waitFor = possibleListItemsMostType() == "gold" ? goToTheNearestStone("gold", false) : goToTheNearestStone("iron", false)
+                                var waitFor = possibleListItemsMostType() == "copper" ? goToTheNearestStone("copper", true) : goToTheNearestStone("copper", true)
                                 log.v("Waiting for = " + waitFor)
                                 if(Number.isInteger(waitFor)) {
                                     timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
