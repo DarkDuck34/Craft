@@ -28,8 +28,7 @@ var currentStoneId = 0;
 var timeoutId = 0;
 
 var possibleCopperIdList = [];
-var possibleIronIdList = [];
-var possibleGoldIdList = [];
+
 
 var ignoredItems = [];
 
@@ -192,30 +191,6 @@ function looper() {
                                     timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
                                 }
                                 break;
-                            case ("железо в радиусе 5 шагов от Вас"):
-                                log.i("Iron in 5-cell radius")
-                                increaseCurrentRadiusStones()
-                                addToPossibleListItems(getLeftForwardAndRight()[1], "iron");
-                                stopLoop();
-                                hitCount = 0;
-                                var waitFor = possibleListItemsMostType() == "gold" ? goToTheNearestStone("gold", true) : goToTheNearestStone("iron", true)
-                                log.v("Waiting for = " + waitFor)
-                                if(Number.isInteger(waitFor)) {
-                                    timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
-                                }
-                                break;
-                            case ("золото в радиусе 5 шагов от Вас"):
-                                log.i("Gold in 5-cell radius")
-                                increaseCurrentRadiusStones()
-                                addToPossibleListItems(getLeftForwardAndRight()[1], "gold");
-                                stopLoop();
-                                hitCount = 0;
-                                var waitFor = goToTheNearestStone("gold", true);
-                                log.v("Waiting for = " + waitFor)
-                                if(Number.isInteger(waitFor)) {
-                                    timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
-                                }
-                                break;
                             case ("Перед Вами нечего добывать."):
                                 log.i("NOTHING TO DIG, GO TO ANOTHER PLACE")
                                 hitCount = 0;
@@ -233,7 +208,7 @@ function looper() {
                             case ("Not overlayed"):
                                 log.v("hitCount = " + hitCount)
                                 if(hitCount < numberOfSearches() &&
-                                    (isThere5Possible() || (searchIron || searchCopper) && getIgnoredItemById(currentStoneId).perc < 100
+                                    (isThere5Possible() || (searchCopper) && getIgnoredItemById(currentStoneId).perc < 100
                                         || searchGold && getIgnoredItemById(currentStoneId).percGold < 100 )) {
                                     log.v("SEARCH")
                                     var direction = fixDirection(currentStoneId);
@@ -318,14 +293,6 @@ function looper() {
                                 currentState = "Copper_forward"
                                 break;
                             }
-                            case ("железо прямо перед Вами"): {
-                                log.e("Iron forward")
-                                removeFromPossibleLists(currentStoneId, "iron")
-                                clickStartDig();
-                                hitCount = 0
-                                currentState = "Iron_forward"
-                                break;
-                            }
                             case ("железо слева от Вас"): {
                                 log.e("Iron on the left, turned and start")
                                 CheckKeyDown({keyCode: 37}) //TurnLeft
@@ -342,32 +309,6 @@ function looper() {
                                 clickStartDig();
                                 hitCount = 0
                                 currentState = "Iron_forward"
-                                break;
-                            }
-                            case ("золото прямо перед Вами"): {
-                                log.e("Gold forward")
-                                removeFromPossibleLists(currentStoneId, "gold")
-                                clickStartDig();
-                                hitCount = 0
-                                currentState = "Gold_forward"
-                                break;
-                            }
-                            case ("золото слева от Вас"): {
-                                log.e("Gold on the left, turned and start")
-                                CheckKeyDown({keyCode: 37}) //TurnLeft
-                                removeFromPossibleLists(getLeftForwardAndRight[0], "gold")
-                                clickStartDig();
-                                hitCount = 0
-                                currentState = "Gold_forward"
-                                break;
-                            }
-                            case ("золото справа от Вас"): {
-                                log.e("Gold on the right, turned and start")
-                                CheckKeyDown({keyCode: 39}) //TurnLeft
-                                removeFromPossibleLists(getLeftForwardAndRight[2], "gold")
-                                clickStartDig();
-                                hitCount = 0
-                                currentState = "Gold_forward"
                                 break;
                             }
                             default: {
@@ -394,10 +335,6 @@ function looper() {
 function numberOfSearches() {
     var probability = 0;
     switch(getLeftForwardAndRight()[1].type){
-        case "gold":
-        case "iron":
-            probability = searchGold ? goldProb.forward : ironProb.forward;
-            break;
         case "copper":
             probability = copperProb.forward;
             break;
@@ -444,59 +381,6 @@ function increaseCurrentRadiusStones() {
                     break;
                 default:
                     ignoredItem.perc += copperProb.radius;
-            }
-            addOrReplaceIgnoredItem(ignoredItem)
-        }
-    }
-    if(searchIron) {
-        var ironAround = getAllItemsInRadius(5, "iron");
-        for(var i = 0; i < ironAround.length; i++) {
-            var ignoredItem = getIgnoredItemById(ironAround[i])
-            switch(ironAround[i]) {
-                case leftForwardRight[0].id:
-                    if(leftForwardRight[0].type == "iron") {
-                         ignoredItem.perc += ironProb.side;
-                    }
-                    break;
-                case leftForwardRight[2].id:
-                    if(leftForwardRight[2].type == "iron") {
-                          ignoredItem.perc += ironProb.side;
-                    }
-                    break;
-                case leftForwardRight[1].id:
-                    if(leftForwardRight[1].type == "iron") {
-                          ignoredItem.perc += ironProb.forward;
-                    }
-                    break;
-                default:
-                     ignoredItem.perc += ironProb.radius;
-            }
-            addOrReplaceIgnoredItem(ignoredItem)
-        }
-    }
-
-    if(searchGold) {
-        var goldAround = getAllItemsInRadius(5, "gold");
-        for(var i = 0; i < goldAround.length; i++) {
-            var ignoredItem = getIgnoredItemById(goldAround[i])
-            switch(goldAround[i]) {
-                case leftForwardRight[0].id:
-                    if(leftForwardRight[0].type == "iron") {
-                         ignoredItem.percGold += goldProb.side;
-                    }
-                    break;
-                case leftForwardRight[2].id:
-                    if(leftForwardRight[2].type == "iron") {
-                          ignoredItem.percGold += goldProb.side;
-                    }
-                    break;
-                case leftForwardRight[1].id:
-                    if(leftForwardRight[1].type == "iron") {
-                          ignoredItem.percGold += goldProb.forward;
-                    }
-                    break;
-                default:
-                    ignoredItem.percGold += goldProb.radius;
             }
             addOrReplaceIgnoredItem(ignoredItem)
         }
@@ -666,18 +550,8 @@ function isInPossibleListItems(id, stoneType) {
                 return possibleCopperIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
                 return false;
                 break;
-            case "iron":
-                return possibleIronIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
-                return false;
-                break;
-            case "gold":
-                return possibleGoldIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
-                return false;
-                break;
             case "undefined":
-                return isInPossibleListItems(id, "copper") ||
-                    isInPossibleListItems(id, "iron") ||
-                    isInPossibleListItems(id, "gold")
+                return isInPossibleListItems(id, "copper")
                 break;
         }
     }
@@ -695,24 +569,14 @@ function removeFromPossibleLists(obj, stoneType) {
             case "copper":
                 possibleCopperIdList = possibleCopperIdList.filter(item => {item.indexOf(id) == -1})
                 break;
-            case "iron":
-                possibleIronIdList = possibleIronIdList.filter(item => {item.indexOf(id) == -1})
-                break;
-            case "gold":
-                possibleGoldIdList = possibleGoldIdList.filter(item => {item.indexOf(id) == -1})
-                break;
             case "undefined":
                 removeFromPossibleLists(id, "copper");
-                removeFromPossibleLists(id, "iron");
-                removeFromPossibleLists(id, "gold");
                 break;
         }
     }
 }
 
 function possibleListItemsMostType() {
-    if(possibleGoldIdList.length > 0) return "gold";
-    if(possibleIronIdList.length > 0) return "iron";
     if(possibleCopperIdList.length > 0) return "copper";
     return whatShouldISearch();
 }
@@ -732,28 +596,6 @@ function addToPossibleListItems(id, stoneType) {
                      possibleCopperIdList.push(stoneIds)
                 }
                 break;
-            case "iron":
-                var copy = true;
-                for(var ind = 0; ind < possibleIronIdList.length; ind++) {
-                    if(possibleIronIdList[ind].join(",").localeCompare(stoneIds.join(",")) == 0) {
-                        copy = false
-                    }
-                }
-                if(copy) {
-                     possibleIronIdList.push(stoneIds)
-                }
-                break;
-            case "gold":
-            var copy = true;
-                for(var ind = 0; ind < possibleGoldIdList.length; ind++) {
-                    if(possibleGoldIdList[ind].join(",").localeCompare(stoneIds.join(",")) == 0) {
-                        copy = false
-                    }
-                }
-                if(copy) {
-                     possibleGoldIdList.push(stoneIds)
-                }
-                break;
         }
     }
 }
@@ -762,10 +604,6 @@ function getAllPossibleItemsByType(stoneType) {
     switch(stoneType) {
         case "copper":
             return possibleCopperIdList;
-        case "iron":
-            return possibleIronIdList;
-        case "gold":
-            return possibleGoldIdList;
     }
 }
 
@@ -1314,9 +1152,7 @@ function createMyElement(targetframe, elname, elid, elclass, elstyle, elonclick,
 
 function startCanv() {
     var copperArr = [];
-    var ironArr = [];
     if(searchCopper) copperArr = getAllItemsInRadius(6, "copper");
-    if(searchIron || searchGold) ironArr = getAllItemsInRadius(6, "iron");
 
     byIdFr("d_act", "canvas").parentNode.style.overflow = "hidden";
 
