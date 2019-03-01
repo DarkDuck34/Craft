@@ -28,7 +28,8 @@ var currentStoneId = 0;
 var timeoutId = 0;
 
 var possibleCopperIdList = [];
-
+var possibleIronIdList = [];
+var possibleGoldIdList = [];
 
 var ignoredItems = [];
 
@@ -140,6 +141,20 @@ function looper() {
                         }
                         break;
                     }
+                    case ("Iron_forward"):
+                    case ("Gold_forward"): {
+                        hitCount = 0;
+                        if(getLeftForwardAndRight()[1].type == "iron" ||
+                           overlayResponse != "Перед Вами нечего добывать.") {
+                            clickStartDig();
+                            removeFromPossibleLists(currentStoneId, "iron");
+                        } else {
+                            currentState = "Nothing_forward"
+                            stopLoop();
+                            timeoutIds.push( setTimeout(startLoop, getRandom(400, 500)) );
+                        }
+                        break;
+                    }
                     case ("Nothing_forward"): {
                         log.v("response = " + overlayResponse);
                         switch (overlayResponse) {
@@ -191,6 +206,30 @@ function looper() {
                                     timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
                                 }
                                 break;
+                            case ("железо в радиусе 5 шагов от Вас"):
+                                log.i("Iron in 5-cell radius")
+                                increaseCurrentRadiusStones()
+                                addToPossibleListItems(getLeftForwardAndRight()[1], "copper");
+                                stopLoop();
+                                hitCount = 0;
+                                var waitFor = possibleListItemsMostType() == "gold" ? goToTheNearestStone("gold", false) : goToTheNearestStone("iron", false)
+                                log.v("Waiting for = " + waitFor)
+                                if(Number.isInteger(waitFor)) {
+                                    timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
+                                }
+                                break;
+                            case ("золото в радиусе 5 шагов от Вас"):
+                                log.i("Gold in 5-cell radius")
+                                increaseCurrentRadiusStones()
+                                addToPossibleListItems(getLeftForwardAndRight()[1], "gold");
+                                stopLoop();
+                                hitCount = 0;
+                                var waitFor = goToTheNearestStone("gold", true);
+                                log.v("Waiting for = " + waitFor)
+                                if(Number.isInteger(waitFor)) {
+                                    timeoutIds.push( setTimeout(startLoop, waitFor * 1000 + getRandom(700, 1200)) );
+                                }
+                                break;
                             case ("Перед Вами нечего добывать."):
                                 log.i("NOTHING TO DIG, GO TO ANOTHER PLACE")
                                 hitCount = 0;
@@ -208,7 +247,7 @@ function looper() {
                             case ("Not overlayed"):
                                 log.v("hitCount = " + hitCount)
                                 if(hitCount < numberOfSearches() &&
-                                    (isThere5Possible() || (searchCopper) && getIgnoredItemById(currentStoneId).perc < 100
+                                    (isThere5Possible() || (searchIron || searchCopper) && getIgnoredItemById(currentStoneId).perc < 100
                                         || searchGold && getIgnoredItemById(currentStoneId).percGold < 100 )) {
                                     log.v("SEARCH")
                                     var direction = fixDirection(currentStoneId);
@@ -293,6 +332,14 @@ function looper() {
                                 currentState = "Copper_forward"
                                 break;
                             }
+                            case ("железо прямо перед Вами"): {
+                                log.e("Iron forward")
+                                removeFromPossibleLists(currentStoneId, "iron")
+                                clickStartDig();
+                                hitCount = 0
+                                currentState = "Iron_forward"
+                                break;
+                            }
                             case ("железо слева от Вас"): {
                                 log.e("Iron on the left, turned and start")
                                 CheckKeyDown({keyCode: 37}) //TurnLeft
@@ -309,6 +356,32 @@ function looper() {
                                 clickStartDig();
                                 hitCount = 0
                                 currentState = "Iron_forward"
+                                break;
+                            }
+                            case ("золото прямо перед Вами"): {
+                                log.e("Gold forward")
+                                removeFromPossibleLists(currentStoneId, "gold")
+                                clickStartDig();
+                                hitCount = 0
+                                currentState = "Gold_forward"
+                                break;
+                            }
+                            case ("золото слева от Вас"): {
+                                log.e("Gold on the left, turned and start")
+                                CheckKeyDown({keyCode: 37}) //TurnLeft
+                                removeFromPossibleLists(getLeftForwardAndRight[0], "gold")
+                                clickStartDig();
+                                hitCount = 0
+                                currentState = "Gold_forward"
+                                break;
+                            }
+                            case ("золото справа от Вас"): {
+                                log.e("Gold on the right, turned and start")
+                                CheckKeyDown({keyCode: 39}) //TurnLeft
+                                removeFromPossibleLists(getLeftForwardAndRight[2], "gold")
+                                clickStartDig();
+                                hitCount = 0
+                                currentState = "Gold_forward"
                                 break;
                             }
                             default: {
@@ -335,6 +408,10 @@ function looper() {
 function numberOfSearches() {
     var probability = 0;
     switch(getLeftForwardAndRight()[1].type){
+        case "gold":
+        case "iron":
+            probability = searchGold ? goldProb.forward : ironProb.forward;
+            break;
         case "copper":
             probability = copperProb.forward;
             break;
@@ -381,6 +458,59 @@ function increaseCurrentRadiusStones() {
                     break;
                 default:
                     ignoredItem.perc += copperProb.radius;
+            }
+            addOrReplaceIgnoredItem(ignoredItem)
+        }
+    }
+    if(searchIron) {
+        var ironAround = getAllItemsInRadius(5, "iron");
+        for(var i = 0; i < ironAround.length; i++) {
+            var ignoredItem = getIgnoredItemById(ironAround[i])
+            switch(ironAround[i]) {
+                case leftForwardRight[0].id:
+                    if(leftForwardRight[0].type == "iron") {
+                         ignoredItem.perc += ironProb.side;
+                    }
+                    break;
+                case leftForwardRight[2].id:
+                    if(leftForwardRight[2].type == "iron") {
+                          ignoredItem.perc += ironProb.side;
+                    }
+                    break;
+                case leftForwardRight[1].id:
+                    if(leftForwardRight[1].type == "iron") {
+                          ignoredItem.perc += ironProb.forward;
+                    }
+                    break;
+                default:
+                     ignoredItem.perc += ironProb.radius;
+            }
+            addOrReplaceIgnoredItem(ignoredItem)
+        }
+    }
+
+    if(searchGold) {
+        var goldAround = getAllItemsInRadius(5, "gold");
+        for(var i = 0; i < goldAround.length; i++) {
+            var ignoredItem = getIgnoredItemById(goldAround[i])
+            switch(goldAround[i]) {
+                case leftForwardRight[0].id:
+                    if(leftForwardRight[0].type == "iron") {
+                         ignoredItem.percGold += goldProb.side;
+                    }
+                    break;
+                case leftForwardRight[2].id:
+                    if(leftForwardRight[2].type == "iron") {
+                          ignoredItem.percGold += goldProb.side;
+                    }
+                    break;
+                case leftForwardRight[1].id:
+                    if(leftForwardRight[1].type == "iron") {
+                          ignoredItem.percGold += goldProb.forward;
+                    }
+                    break;
+                default:
+                    ignoredItem.percGold += goldProb.radius;
             }
             addOrReplaceIgnoredItem(ignoredItem)
         }
@@ -513,8 +643,14 @@ function getAllItemsInRadius(radius, stoneType) {
                         itemsInRadius.push(parseInt(item.id));
                     }
                     break;
+                case "iron":
+                case "gold":
+                    if(item.type >= 70 && item.type <= 73 || item.type >= 107 && item.type <= 113) {
+                        itemsInRadius.push(parseInt(item.id));
+                    }
+                    break;
                 case "undefined":
-                    if(item.type >= 74 && item.type <= 75 || item.type >= 104 && item.type <= 106) {
+                    if(item.type >= 70 && item.type <= 75 || item.type >= 104 && item.type <= 113) {
                         itemsInRadius.push(parseInt(item.id));
                     }
                     break;
@@ -535,6 +671,9 @@ function getStoneTypeById(id) {
     if(typeNum >= 74 && typeNum <= 75 || typeNum >= 104 && typeNum <= 106) {
         return "copper";
     }
+    if(typeNum >= 70 && typeNum <= 73 || typeNum >= 107 && typeNum <= 113) {
+        return "iron";
+    }
     return "undefined";
 }
 
@@ -550,8 +689,18 @@ function isInPossibleListItems(id, stoneType) {
                 return possibleCopperIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
                 return false;
                 break;
+            case "iron":
+                return possibleIronIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
+                return false;
+                break;
+            case "gold":
+                return possibleGoldIdList.forEach(item => {if(item.indexOf(id) != -1) return true})
+                return false;
+                break;
             case "undefined":
-                return isInPossibleListItems(id, "copper")
+                return isInPossibleListItems(id, "copper") ||
+                    isInPossibleListItems(id, "iron") ||
+                    isInPossibleListItems(id, "gold")
                 break;
         }
     }
@@ -569,14 +718,24 @@ function removeFromPossibleLists(obj, stoneType) {
             case "copper":
                 possibleCopperIdList = possibleCopperIdList.filter(item => {item.indexOf(id) == -1})
                 break;
+            case "iron":
+                possibleIronIdList = possibleIronIdList.filter(item => {item.indexOf(id) == -1})
+                break;
+            case "gold":
+                possibleGoldIdList = possibleGoldIdList.filter(item => {item.indexOf(id) == -1})
+                break;
             case "undefined":
                 removeFromPossibleLists(id, "copper");
+                removeFromPossibleLists(id, "iron");
+                removeFromPossibleLists(id, "gold");
                 break;
         }
     }
 }
 
 function possibleListItemsMostType() {
+    if(possibleGoldIdList.length > 0) return "gold";
+    if(possibleIronIdList.length > 0) return "iron";
     if(possibleCopperIdList.length > 0) return "copper";
     return whatShouldISearch();
 }
@@ -596,6 +755,28 @@ function addToPossibleListItems(id, stoneType) {
                      possibleCopperIdList.push(stoneIds)
                 }
                 break;
+            case "iron":
+                var copy = true;
+                for(var ind = 0; ind < possibleIronIdList.length; ind++) {
+                    if(possibleIronIdList[ind].join(",").localeCompare(stoneIds.join(",")) == 0) {
+                        copy = false
+                    }
+                }
+                if(copy) {
+                     possibleIronIdList.push(stoneIds)
+                }
+                break;
+            case "gold":
+            var copy = true;
+                for(var ind = 0; ind < possibleGoldIdList.length; ind++) {
+                    if(possibleGoldIdList[ind].join(",").localeCompare(stoneIds.join(",")) == 0) {
+                        copy = false
+                    }
+                }
+                if(copy) {
+                     possibleGoldIdList.push(stoneIds)
+                }
+                break;
         }
     }
 }
@@ -604,6 +785,10 @@ function getAllPossibleItemsByType(stoneType) {
     switch(stoneType) {
         case "copper":
             return possibleCopperIdList;
+        case "iron":
+            return possibleIronIdList;
+        case "gold":
+            return possibleGoldIdList;
     }
 }
 
@@ -612,7 +797,7 @@ function goToTheNearestStone(stoneType, goTo5Possible) {
         var itemsArr = getAllPossibleItemsByType(stoneType);
         var resultArr = [];
         itemsArr.forEach(item => {item.forEach(id => {
-            if(getDistanceToId(id) <= 6) {
+            if(getDistanceToId(id) <= 13) {
                 resultArr.push(id)
             }
         })})
@@ -638,7 +823,7 @@ function goToTheNearestStone(stoneType, goTo5Possible) {
         var allItemsOnTheScreen = forest_frame.global_data.abs_poses
         var stoneItems = [];
 
-        var typedStoneIds = getAllItemsInRadius(6, stoneType)
+        var typedStoneIds = getAllItemsInRadius(13, stoneType)
 
         for(var index = 0; index < allItemsOnTheScreen.length; index++) {
             var item = allItemsOnTheScreen[index];
@@ -651,7 +836,7 @@ function goToTheNearestStone(stoneType, goTo5Possible) {
             }
         }
         var stoneItemsRadius = [[],[],[],[],[],[],[],[],[],[],[],[],[]]
-        for(var radius = 1; radius <= 6; radius++) {
+        for(var radius = 1; radius <= 13; radius++) {
            for(var index = 0; index < stoneItems.length; index++) {
                 var dx = Math.abs(stoneItems[index].posx - currentPosition.x);
                 var dy = Math.abs(stoneItems[index].posy - currentPosition.y);
@@ -732,7 +917,7 @@ function createControls(){
     if (top.frames["d_pers"].document.getElementsByTagName('body')[0]!=null) {
         pers_f = top.frames["d_pers"].document;
         var bod = pers_f.getElementsByTagName('body')[0];
-        var controlsdiv = createMyElement(pers_f, "div", "controlsdiv", "", "padding:0px 5px 0px 5px;", "", "<p style='text-align:center; font-weight:bold; margin: 5px 0px 0px 0px;'>Скрипт</p>");
+        var controlsdiv = createMyElement(pers_f, "div", "controlsdiv", "", "padding:0px 5px 0px 5px;", "", "<p style='text-align:center; font-weight:bold; margin: 5px 0px 0px 0px;'>Скрипта</p>");
         var startScript = createNewButton(pers_f, "framecontrolstart", "width:100%!important;", "top.frames[\"d_act\"].startScript()", "Задротить", "width:49%;");
         controlsdiv.appendChild(startScript);
         var stopScript = createNewButton(pers_f, "framecontrolstop", "width:100%!important;", "top.frames[\"d_act\"].stopScript()", "Отдыхать", "width:49%;");
@@ -862,7 +1047,7 @@ function getApprovanceById(id) {
     if(!isNaN(x) && !isNaN(y)) {
         if(!isNaN(id)) {
             var result = getCoordinates(id);
-            if(Math.abs(result.x - x) < 6 && Math.abs(result.y - y) < 6) {
+            if(Math.abs(result.x - x) < 13 && Math.abs(result.y - y) < 13) {
                 return true;
             }
         }
@@ -908,7 +1093,7 @@ function chooseDirection(x, y) {
     var dx = x_my - x
     var dy = y_my - y
 
-    if(Math.abs(dx) < 13 && Math.abs(dy) < 6) {
+    if(Math.abs(dx) < 13 && Math.abs(dy) < 13) {
         result.x = x;
         result.y = y;
         result.visible = true;
@@ -918,82 +1103,82 @@ function chooseDirection(x, y) {
     if(dx < 0) {
         if(dy < 0) { //Done
             if(Math.abs(dx)) {
-                result.x = 5 + x_my;
-                result.y = 5 + y_my;
+                result.x = 12 + x_my;
+                result.y = 12 + y_my;
             } else {
                 if(Math.abs(dx) > Math.abs(dy)) {
-                    result.x = 5 + x_my
-                    result.y = (((y - y_my) * 5) / (x - x_my)) + y_my
+                    result.x = 12 + x_my
+                    result.y = (((y - y_my) * 12) / (x - x_my)) + y_my
                 }
                 if(Math.abs(dy) > Math.abs(dx)) {
-                    result.y = 5 + y_my
-                    result.x = (((x - x_my) * 5) / (y - y_my)) + x_my
+                    result.y = 12 + y_my
+                    result.x = (((x - x_my) * 12) / (y - y_my)) + x_my
                 }
             }
         }
         if(dy > 0) {
             if(Math.abs(dx) == Math.abs(dy)) {
-                result.x = 5 + x_my;
-                result.y = -5 + y_my
+                result.x = 12 + x_my;
+                result.y = -12 + y_my
             } else {
                 if(Math.abs(dx) > Math.abs(dy)) {
-                    result.x = 5 + x_my
-                    result.y = (((y - y_my) * 5) / (x - x_my)) + y_my
+                    result.x = 12 + x_my
+                    result.y = (((y - y_my) * 12) / (x - x_my)) + y_my
                 }
                 if(Math.abs(dy) > Math.abs(dx)) {
-                    result.y = -5 + y_my
-                    result.x = -((x - x_my) * 5) / (y - y_my) + x_my
+                    result.y = -12 + y_my
+                    result.x = -((x - x_my) * 12) / (y - y_my) + x_my
                 }
             }
         }
         if(dy == 0) {
             result.y = y_my;
-            result.x = 5 + x_my;
+            result.x = 12 + x_my;
         }
     }
     if(dx > 0) {
         if(dy < 0) {//Done
             if(Math.abs(dx) == Math.abs(dy)) {
-                result.x = -5 + x_my;
-                result.y = 5 + y_my;
+                result.x = -12 + x_my;
+                result.y = 12 + y_my;
             } else {
                 if(Math.abs(dx) > Math.abs(dy)) {
-                    result.x = -5 + x_my
-                    result.y = -(((y - y_my) * 5) / (x - x_my)) + y_my
+                    result.x = -12 + x_my
+                    result.y = -(((y - y_my) * 12) / (x - x_my)) + y_my
                 }
                 if(Math.abs(dy) > Math.abs(dx)) {
-                    result.y = 5 + y_my
-                    result.x = (((x - x_my) * 5) / (y - y_my)) + x_my
+                    result.y = 12 + y_my
+                    result.x = (((x - x_my) * 12) / (y - y_my)) + x_my
                 }
             }
         }
         if(dy > 0) {//Done
             if(Math.abs(dx) == Math.abs(dy)) {
-                result.x = -5 + x_my;
-                result.y = -5 + y_my
+                result.x = -12 + x_my;
+                result.y = -12 + y_my
             } else {
                 if(Math.abs(dx) > Math.abs(dy)) {
-                    result.x = -5 + x_my
-                    result.y = -(((y - y_my) * 5) / (x - x_my)) + y_my
+                    result.x = -12 + x_my
+                    result.y = -(((y - y_my) * 12) / (x - x_my)) + y_my
                 }
                 if(Math.abs(dy) > Math.abs(dx)) {
-                    result.y = -5 + y_my
-                    result.x = -((x - x_my) * 5) / (y - y_my) + x_my
+                    result.y = -12 + y_my
+                    result.x = -((x - x_my) * 12) / (y - y_my) + x_my
                 }
             }
         }
         if(dy == 0) {
             result.y = y_my;
-            result.x = -5 + x_my;
+            result.x = -12 + x_my;
         }
     }
     if(dx == 0) {
         result.x = x_my;
         if(dy < 0) {
-            result.y = 5 + y_my
+            result.y = 12 + y_my
         }
         if(dy > 0) {
-            result.y = -5 + y_my
+            result.y = -12 + y_my
         }
         if(dy == 0) {
             result.y = y_my;
@@ -1152,7 +1337,9 @@ function createMyElement(targetframe, elname, elid, elclass, elstyle, elonclick,
 
 function startCanv() {
     var copperArr = [];
+    var ironArr = [];
     if(searchCopper) copperArr = getAllItemsInRadius(6, "copper");
+    if(searchIron || searchGold) ironArr = getAllItemsInRadius(6, "iron");
 
     byIdFr("d_act", "canvas").parentNode.style.overflow = "hidden";
 
