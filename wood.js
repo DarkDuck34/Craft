@@ -112,7 +112,7 @@ function looper() {
                     }
                 })
             })
-            promise.then(function() {startBtnClicked()})
+            promise.then(function() {startLoop()})
         } else {
             if(overlayResponse == "Вы травмированы. Для работы необходимо вылечить травмы.") {
                 stopLoop();
@@ -650,7 +650,7 @@ function getAllItemsInRadius(radius, woodType) {
                     }
                     break;
                 case "undefined":
-                    if(item.type == 5 || item.type == 8 || item.type == 9 || item.type == 27 || item.type == 29 || item.type == 30) {
+                    if(item.type == 5 || item.type == 9 || item.type == 27 || item.type == 30) {
                         itemsInRadius.push(parseInt(item.id));
                     }
                     break;
@@ -668,10 +668,10 @@ function getWoodTypeById(id) {
                 typeNum = parseInt(item.type)
             }
         });
-    if(typeNum == 5 || typeNum == 9 || typeNum == 27 || typeNum == 30) {
+    if(typeNum == 8 || typeNum == 29) {
         return "sosna";
     }
-    if(typeNum == 5 || typeNum == 8 || typeNum == 9 || typeNum == 27 || typeNum == 29 || typeNum == 30) {
+    if(typeNum == 5 || typeNum == 9 || typeNum == 27 || typeNum == 30) {
         return "dub";
     }
     return "undefined";
@@ -741,7 +741,7 @@ function possibleListItemsMostType() {
 }
 
 function addToPossibleListItems(id, woodType) {
-    var woodIds = getAllItemsInRadius(5, woodType).filter(item => item != id);
+    var woodIds = getAllItemsInRadius(13, woodType).filter(item => item != id);
     if(id != 0) {
         switch(woodType) {
             case "sosna":
@@ -1338,8 +1338,8 @@ function createMyElement(targetframe, elname, elid, elclass, elstyle, elonclick,
 function startCanv() {
     var sosnaArr = [];
     var dubArr = [];
-    if(searchSosna) sosnaArr = getAllItemsInRadius(6, "sosna");
-    if(searchDub || searchRed) dubArr = getAllItemsInRadius(6, "dub");
+    if(searchSosna) sosnaArr = getAllItemsInRadius(13, "sosna");
+    if(searchDub || searchRed) dubArr = getAllItemsInRadius(13, "dub");
 
     byIdFr("d_act", "canvas").parentNode.style.overflow = "hidden";
 
